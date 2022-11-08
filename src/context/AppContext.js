@@ -1,0 +1,45 @@
+import React, { useState, useEffect } from 'react';
+import jwt_decode from 'jwt-decode';
+
+const AppContext = React.createContext();
+const { Provider } = AppContext;
+
+function AppProvider({children}){
+    const [idUsuario, setIdUsuario] = useState(null);
+    const [nombre, setNombre] = useState(null);
+    const [token, setToken] = useState(localStorage.token);
+    function login(data){
+        const token = data.token;
+        const decoded = jwt_decode(token);
+        console.log('decoded => ', decoded);
+        setToken(token);
+        setIdUsuario(decoded.userId);
+        setNombre(decoded.user);
+        localStorage.token = token;
+    }
+    function logout(){
+        setNombre(null);
+        setIdUsuario(null);
+        localStorage.removeItem('token');
+    }
+    useEffect(()=>{
+        console.log('UserProvider useEffect');
+        if(token){
+            console.log('Sí hay token');
+            try {
+                const decoded = jwt_decode(token);
+                setIdUsuario(decoded.userId);
+                setNombre(decoded.user);
+            } catch (error) {
+                console.log('Token inválido');
+            }
+        }
+    }, []);
+    return(
+        <Provider value={{token, idUsuario, nombre, login, logout}}>
+            {children}
+        </Provider>
+    );
+}
+
+export { AppProvider, AppContext };
