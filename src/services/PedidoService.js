@@ -18,6 +18,7 @@ export const mostrarPedidoService = async (id) => {
 };
 
 export const editarPedidoService = async (datos) => {
-  const response = await Api().put(PREFIX_URL + "/editar/" + datos.id, datos);
-  return response;
+	const response = await Api().put(PREFIX_URL+'/editar/'+datos._id, datos);
+	return response;
 };
+

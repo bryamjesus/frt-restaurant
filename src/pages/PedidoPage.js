@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from "react";
-import { Modal, Button } from "react-bootstrap";
+import React, { useState, useEffect, useRef } from "react";
+import { Modal, Button, Dropdown, Form } from "react-bootstrap";
 import { listarPlatoService } from "../services/PlatoService";
 import {
   listarPedidoService,
@@ -36,7 +36,7 @@ function PedidoPage() {
     setListaPlatos(result.data);
   };
 
-  const handleChange = async (e) => {
+  const handleChange = (e) => {
     const { name, value } = e.target;
     const nDatos = { ...datos, [name]: value };
     setDatos(nDatos);
@@ -45,19 +45,89 @@ function PedidoPage() {
   const handleShowModal = () => setShowModal(true);
 
   const handleCloseModal = () => {
-    setTituloModal("Nuevo Pedido");
+    setDatos(initValues);
     setShowModal(false);
+    setTituloModal("Nuevo Pedido");
   };
 
-  const handleShowData = (id) => {
+  const handleShowData = async (id) => {
     setTituloModal("Editar Pedido");
+    const result = await mostrarPedidoService(id);
+    setDatos(result.data);
     handleShowModal();
+  };
+
+  const handleAddDetail = (id) => {
+    const detallePlato = listaPlatos.find((item) => item._id === id);
+    console.log("detallePlato =>", detallePlato);
+    const nuevoPlato = {
+      plato: detallePlato.nombre,
+      precio: detallePlato.precio,
+      estado: "P",
+    };
+    const nuevoDetalle = [...datos.detalle, nuevoPlato];
+    console.log("nuevoDetalle =>", nuevoDetalle);
+    const total = datos.total + detallePlato.precio;
+    const nDatos = { ...datos, total, detalle: nuevoDetalle };
+    console.log("nDatos =>", nDatos);
+    setDatos(nDatos);
+  };
+
+  const handleDeleteDetail = (index) => {
+    const detallePlato = datos.detalle[index];
+    console.log("detallePlato=> ", detallePlato);
+    const nuevoDetalle = datos.detalle.filter(
+      (item, indexItem) => indexItem !== index
+    );
+    console.log("nuevoDetalle=> ", nuevoDetalle);
+    const total = datos.total - detallePlato.precio;
+    const nDatos = { ...datos, total, detalle: nuevoDetalle };
+    setDatos(nDatos);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log(datos);
+    // codigo para enviar el pedido a traves del servicio
+    if (datos._id) {
+      console.log("Editando el pedido");
+      await editarPedidoService(datos);
+    } else {
+      console.log("Ingresando un nuevo pedido");
+      await guardarPedidoPlatoCategoriaService(datos);
+    }
+    await listarPedidos();
     handleCloseModal();
   };
+
+  const CustomMenu = React.forwardRef(
+    ({ children, style, className, "aria-labelledby": labeledBy }, ref) => {
+      const [value, setValue] = useState("");
+      return (
+        <div
+          ref={ref}
+          style={style}
+          className={className}
+          aria-labelledby={labeledBy}
+        >
+          <Form.Control
+            autoFocus
+            className="mx-3 my-2 w-auto"
+            placeholder="Escribe el nombre..."
+            onChange={(e) => setValue(e.target.value)}
+            value={value}
+          />
+          <ul className="list-unstyled">
+            {React.Children.toArray(children).filter(
+              (child) =>
+                !value ||
+                child.props.children.toString().toLowerCase().startsWith(value)
+            )}
+          </ul>
+        </div>
+      );
+    }
+  );
 
   useEffect(() => {
     listarPedidos();
@@ -119,19 +189,18 @@ function PedidoPage() {
           <Modal.Body>
             <div className="row">
               <div className="col-md-8">
-                <div className="input-group">
-                  <select ref={platoRef} className="form-select">
-                    <option value="">Seleccionar un plato</option>
+                <Dropdown onSelect={(eventKey) => handleAddDetail(eventKey)}>
+                  <Dropdown.Toggle variant="success">
+                    Seleccionar un plato
+                  </Dropdown.Toggle>
+                  <Dropdown.Menu as={CustomMenu}>
                     {listaPlatos.map((plato) => (
-                      <option key={plato._id} value={platoRef._id}>
+                      <Dropdown.Item key={plato._id} eventKey={plato._id}>
                         {plato.nombre} = S/{plato.precio}
-                      </option>
+                      </Dropdown.Item>
                     ))}
-                  </select>
-                  <Button type="button" variant="secondary">
-                    Agregar
-                  </Button>
-                </div>
+                  </Dropdown.Menu>
+                </Dropdown>
                 <table className="table">
                   <thead>
                     <tr>
@@ -148,7 +217,11 @@ function PedidoPage() {
                         <td>{item.precio}</td>
                         <td>{item.estado}</td>
                         <td>
-                          <Button variant="danger" size="sm">
+                          <Button
+                            onClick={() => handleDeleteDetail(index)}
+                            variant="danger"
+                            size="sm"
+                          >
                             <i className="bi bi-trash"></i>
                           </Button>
                         </td>
@@ -161,6 +234,43 @@ function PedidoPage() {
                 <h4 className="d-flex justify-content-between">
                   Total <span>S/ {datos.total}</span>
                 </h4>
+                <div className="mb-3">
+                  <label className="form-label">Mesa</label>
+                  <input
+                    type="text"
+                    onChange={handleChange}
+                    name="mesa"
+                    className="form-control"
+                    value={datos.mesa}
+                    required
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Cliente</label>
+                  <input
+                    type="text"
+                    onChange={handleChange}
+                    name="cliente"
+                    className="form-control"
+                    value={datos.cliente}
+                    required
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Estado</label>
+                  <select
+                    onChange={handleChange}
+                    className="form-select"
+                    name="estado"
+                    value={datos.estado}
+                    required
+                  >
+                    <option value="">Seleccione una opción</option>
+                    <option value="A">Activo</option>
+                    <option value="T">Terminado</option>
+                    <option value="N">Anulado</option>
+                  </select>
+                </div>
               </div>
             </div>
           </Modal.Body>
