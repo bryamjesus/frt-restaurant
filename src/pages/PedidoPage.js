@@ -101,7 +101,7 @@ function PedidoPage() {
       console.log("Ingresando un nuevo pedido");
       await guardarPedidoPlatoCategoriaService(datos);
     }
-    socket.emit('channel-cocina-pedido','Listar de nuevo platos')
+    socket.emit("channel-cocina-pedido", "Listar de nuevo platos");
     await listarPedidos();
     handleCloseModal();
   };
@@ -141,14 +141,13 @@ function PedidoPage() {
   }, []);
 
   useEffect(() => {
-    const socket = io(API_URL)
-    setSocket(socket)
+    const socket = io(API_URL);
+    setSocket(socket);
     socket.on("channel-cocina-entrega", (mensaje) => {
       console.log("Mensaje desde el mozo", mensaje);
       Swal.fire(`Recoger ${mensaje.plato} para la mesa ${mensaje.mesa}`);
     });
-  }, [])
-  
+  }, []);
 
   return (
     <div className="container">
