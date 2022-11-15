@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+import { io } from "socket.io-client";
 import Swal from "sweetalert2";
+import { API_URL } from "../helper/Config";
 import {
   listarCocinaService,
   editarCocinaService,
@@ -7,6 +9,7 @@ import {
 
 function CocinaPage() {
   const [lista, setLista] = useState([]);
+  const [socket, setSocket] = useState(null);
 
   const listar = async () => {
     const result = await listarCocinaService();
@@ -29,6 +32,7 @@ function CocinaPage() {
       if (result.isConfirmed) {
         await editarCocinaService(detalle._id);
         await listar();
+        socket.emit("channel-cocina-entrega", detalle);
         Swal.fire("Plato entregado!", "", "success");
       }
     });
@@ -36,6 +40,22 @@ function CocinaPage() {
 
   useEffect(() => {
     listar();
+  }, []);
+
+  useEffect(() => {
+    const socket = io(API_URL);
+    setSocket(socket);
+    socket.on("channel-cocina-pedido", (mensaje) => {
+      console.log("Mensaje desde el mozo", mensaje);
+      Swal.fire({
+        position: "top-end",
+        icon: "success",
+        title: "Nuevo Pedido",
+        showConfirmButton: false,
+        timer: 1500,
+      });
+      listar();
+    });
   }, []);
 
   return (

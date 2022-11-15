@@ -7,6 +7,9 @@ import {
   mostrarPedidoService,
   editarPedidoService,
 } from "../services/PedidoService";
+import { io } from "socket.io-client";
+import { API_URL } from "../helper/Config";
+import Swal from "sweetalert2";
 
 const initValues = {
   _id: "",
@@ -23,6 +26,8 @@ function PedidoPage() {
   const [listaPlatos, setListaPlatos] = useState([]);
   const [datos, setDatos] = useState(initValues);
   const [showModal, setShowModal] = useState(false);
+
+  const [socket, setSocket] = useState(null);
 
   const platoRef = useRef();
 
@@ -96,6 +101,7 @@ function PedidoPage() {
       console.log("Ingresando un nuevo pedido");
       await guardarPedidoPlatoCategoriaService(datos);
     }
+    socket.emit('channel-cocina-pedido','Listar de nuevo platos')
     await listarPedidos();
     handleCloseModal();
   };
@@ -133,6 +139,16 @@ function PedidoPage() {
     listarPedidos();
     listarPlatos();
   }, []);
+
+  useEffect(() => {
+    const socket = io(API_URL)
+    setSocket(socket)
+    socket.on("channel-cocina-entrega", (mensaje) => {
+      console.log("Mensaje desde el mozo", mensaje);
+      Swal.fire(`Recoger ${mensaje.plato} para la mesa ${mensaje.mesa}`);
+    });
+  }, [])
+  
 
   return (
     <div className="container">
